@@ -207,7 +207,9 @@ function FoodPhoto({ menu, className = "" }) {
 
 function FoodCard({ menu, open, liked, toggle }) {
   return (
-    <article className="food-card">
+    <article
+      className={`food-card${menu.category === "lunch" ? " food-card--lunch" : ""}`}
+    >
       <button
         className="card-open"
         onClick={() => open(menu)}
@@ -308,11 +310,19 @@ function SmallBanner({ variant, onRandom }) {
       ? "art/chef-lunch.png"
       : "art/chef-wine.png";
   return (
-    <div className={`banner-row${onRandom ? " banner-with-random" : ""}${isFavorite ? " banner-favorite" : ""}`}>
+    <div
+      className={`banner-row${onRandom ? " banner-with-random" : ""}${isFavorite ? " banner-favorite" : ""}`}
+    >
       <div className="banner-mascot">
         <img
           src={asset(bannerImage)}
-          alt={isFavorite ? "하트와 고양이를 안은 즐겨찾기 요리사" : isLunch ? "도시락 요리사" : "와인을 든 요리사"}
+          alt={
+            isFavorite
+              ? "하트와 고양이를 안은 즐겨찾기 요리사"
+              : isLunch
+                ? "도시락 요리사"
+                : "와인을 든 요리사"
+          }
         />
       </div>
       <div className="banner-bubble">
@@ -372,68 +382,147 @@ const CHEF_CHARACTERS = [
 ];
 
 function ChefGallery({ close }) {
-  const scrollRef = useRef(null);
+  // Scroll 이벤트에 인디케이터를 연결하면 부드러운 이동 중 점이 계속 흔들려요.
+  // 활성 이미지 번호만 관리하면 점은 즉시 바뀌고 마지막/첫 장도 순환합니다.
   const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState("next");
+  const [changeKey, setChangeKey] = useState(0);
+  const currentRef = useRef(0);
+  const pointerStartRef = useRef(null);
+
+  const goTo = (index, preferredDirection) => {
+    const length = CHEF_CHARACTERS.length;
+    const next = ((index % length) + length) % length;
+    if (next === currentRef.current) return;
+    const travel =
+      preferredDirection || (next > currentRef.current ? "next" : "prev");
+    currentRef.current = next;
+    setDirection(travel);
+    setCurrent(next);
+    setChangeKey((key) => key + 1);
+  };
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKeyDown = (event) => {
       if (event.key === "Escape") close();
-      if (event.key === "ArrowLeft") shift(-1);
-      if (event.key === "ArrowRight") shift(1);
+      if (event.key === "ArrowLeft") goTo(currentRef.current - 1, "prev");
+      if (event.key === "ArrowRight") goTo(currentRef.current + 1, "next");
     };
     document.addEventListener("keydown", onKeyDown);
+    // 갤러리에서 넘기기 전에 다음 이미지도 미리 캐시에 올려서 버벅임을 줄여요.
+    const preloads = CHEF_CHARACTERS.map((character) => {
+      const image = new Image();
+      image.src = asset(character.src);
+      return image;
+    });
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = originalOverflow;
+      preloads.length = 0;
     };
   }, [close]);
 
-  const goTo = (index) => {
-    const next = Math.max(0, Math.min(index, CHEF_CHARACTERS.length - 1));
-    const slider = scrollRef.current;
-    if (slider) slider.scrollTo({ left: slider.clientWidth * next, behavior: "smooth" });
-    setCurrent(next);
+  const onPointerDown = (event) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    pointerStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      id: event.pointerId,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
   };
-  const shift = (amount) => {
-    const slider = scrollRef.current;
-    if (!slider) return;
-    const at = Math.round(slider.scrollLeft / slider.clientWidth);
-    goTo(at + amount);
+  const onPointerUp = (event) => {
+    const start = pointerStartRef.current;
+    pointerStartRef.current = null;
+    if (!start || start.id !== event.pointerId) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) >= 35 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      goTo(currentRef.current + (dx < 0 ? 1 : -1), dx < 0 ? "next" : "prev");
+    }
   };
 
   return (
-    <div className="chef-gallery-overlay" onMouseDown={(e) => {
-      if (e.target === e.currentTarget) close();
-    }}>
-      <section className="chef-gallery-dialog" role="dialog" aria-modal="true" aria-labelledby="chef-gallery-title">
+    <div
+      className="chef-gallery-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) close();
+      }}
+    >
+      <section
+        className="chef-gallery-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="chef-gallery-title"
+      >
         <header className="chef-gallery-head">
           <div>
             <h2 id="chef-gallery-title">하리씨의 귀여운 요리사들 💕</h2>
             <p>옆으로 밀어서 다른 캐릭터도 봐요 ♡</p>
           </div>
-          <button type="button" className="chef-gallery-close" onClick={close} aria-label="갤러리 닫기"><X size={22} /></button>
+          <button
+            type="button"
+            className="chef-gallery-close"
+            onClick={close}
+            aria-label="갤러리 닫기"
+          >
+            <X size={22} />
+          </button>
         </header>
-        {/* 사진 양옆 중앙의 화살표: 기존 스와이프와 인디케이터 기능 유지 */}
         <div className="chef-gallery-stage">
-          <div className="chef-gallery-track" ref={scrollRef} onScroll={(e) => {
-            const el = e.currentTarget;
-            if (el.clientWidth) setCurrent(Math.max(0, Math.min(CHEF_CHARACTERS.length - 1, Math.round(el.scrollLeft / el.clientWidth))));
-          }} aria-label="캐릭터 사진 좌우 스크롤" tabIndex={0}>
-            {CHEF_CHARACTERS.map((character) => (
-              <div className="chef-gallery-slide" key={character.src}>
-                <img src={asset(character.src)} alt={character.name} draggable={false} />
-              </div>
-            ))}
+          <div
+            className="chef-gallery-track"
+            onPointerDown={onPointerDown}
+            onPointerUp={onPointerUp}
+            onPointerCancel={() => {
+              pointerStartRef.current = null;
+            }}
+            aria-label="캐릭터 사진: 좌우로 밀어서 넘기기"
+            tabIndex={0}
+          >
+            <div className="chef-gallery-slide">
+              <img
+                key={`${current}-${changeKey}`}
+                className={`chef-gallery-photo chef-gallery-photo-${direction}`}
+                src={asset(CHEF_CHARACTERS[current].src)}
+                alt={CHEF_CHARACTERS[current].name}
+                draggable={false}
+                decoding="async"
+              />
+            </div>
           </div>
-          <button type="button" className="chef-gallery-arrow chef-gallery-prev" onClick={() => goTo(current - 1)} disabled={current === 0} aria-label="이전 캐릭터"><ArrowLeft size={23} /></button>
-          <button type="button" className="chef-gallery-arrow chef-gallery-next" onClick={() => goTo(current + 1)} disabled={current === CHEF_CHARACTERS.length - 1} aria-label="다음 캐릭터"><ArrowRight size={23} /></button>
+          <button
+            type="button"
+            className="chef-gallery-arrow chef-gallery-prev"
+            onClick={() => goTo(currentRef.current - 1, "prev")}
+            aria-label="이전 캐릭터"
+          >
+            <ArrowLeft size={23} />
+          </button>
+          <button
+            type="button"
+            className="chef-gallery-arrow chef-gallery-next"
+            onClick={() => goTo(currentRef.current + 1, "next")}
+            aria-label="다음 캐릭터"
+          >
+            <ArrowRight size={23} />
+          </button>
         </div>
-        <p className="chef-gallery-name" aria-live="polite">{CHEF_CHARACTERS[current].name}</p>
+        <p className="chef-gallery-name" aria-live="polite">
+          {CHEF_CHARACTERS[current].name}
+        </p>
         <div className="chef-gallery-dots" aria-label="캐릭터 선택">
           {CHEF_CHARACTERS.map((character, i) => (
-            <button type="button" key={character.src} className={current === i ? "active" : ""} aria-label={`${i + 1}번째 캐릭터: ${character.name}`} aria-current={current === i ? "true" : undefined} onClick={() => goTo(i)} />
+            <button
+              type="button"
+              key={character.src}
+              className={current === i ? "active" : ""}
+              aria-label={`${i + 1}번째 캐릭터: ${character.name}`}
+              aria-current={current === i ? "true" : undefined}
+              onClick={() => goTo(i)}
+            />
           ))}
         </div>
       </section>
@@ -448,8 +537,18 @@ function PageHeader({ title, back, onGalleryOpen }) {
         <ArrowLeft size={26} />
       </button>
       <h1>{title}</h1>
-      <button type="button" className="header-mini-button" onClick={onGalleryOpen} aria-label="요리사 캐릭터 갤러리 열기" title="요리사 캐릭터 모아보기">
-        <img className="header-mini" src={asset("art/chef-hug.png")} alt="귀여운 요리사" />
+      <button
+        type="button"
+        className="header-mini-button"
+        onClick={onGalleryOpen}
+        aria-label="요리사 캐릭터 갤러리 열기"
+        title="요리사 캐릭터 모아보기"
+      >
+        <img
+          className="header-mini"
+          src={asset("art/chef-hug.png")}
+          alt="귀여운 요리사"
+        />
       </button>
     </header>
   );
@@ -624,7 +723,7 @@ function DetailPage({ menu, back, liked, toggle, shareRecipe, shareOrder }) {
         <p className="recipe-desc">{menu.description} ♡</p>
         <div className="ingredients-wrap">
           <div>
-            <h2 className="section-pill">🌸 재료</h2>
+            <h2 className="section-pill">🌸 재료 · {menu.servings ?? 1}인분</h2>
             <ul className="ingredient-list">
               {menu.ingredients.map((s, i) => (
                 <li key={i}>{s}</li>
@@ -718,7 +817,13 @@ export default function App() {
   // 홈/도시락/저녁/즐겨찾기에서 문서 스크롤을 잠가 상단이 움직이지 않게 합니다.
   // 목록에서는 카드 영역(.menu-scroll-region)만 스크롤 가능합니다.
   useEffect(() => {
-    if (page !== "home" && page !== "lunch" && page !== "dining" && page !== "favorite") return;
+    if (
+      page !== "home" &&
+      page !== "lunch" &&
+      page !== "dining" &&
+      page !== "favorite"
+    )
+      return;
 
     const html = document.documentElement;
     const body = document.body;
@@ -812,7 +917,9 @@ export default function App() {
   const shown = useMemo(() => {
     if (page === "lunch")
       return menus.filter(
-        (m) => m.category === "lunch" && (lunchCuisine === "전체" || m.cuisine === lunchCuisine),
+        (m) =>
+          m.category === "lunch" &&
+          (lunchCuisine === "전체" || m.cuisine === lunchCuisine),
       );
     if (page === "favorite")
       return favs.map((id) => menus.find((m) => m.id === id)).filter(Boolean);
@@ -845,7 +952,9 @@ export default function App() {
   };
   const randomCandidates =
     randomType === "lunch"
-      ? (page === "lunch" ? shown : menus.filter((item) => item.category === "lunch"))
+      ? page === "lunch"
+        ? shown
+        : menus.filter((item) => item.category === "lunch")
       : shown.filter(
           (item) => item.category === "dinner" || item.category === "snack",
         );
@@ -884,7 +993,9 @@ export default function App() {
     </div>
   );
   return (
-    <div className={`site-shell${page === "home" ? " is-home" : ""}${page === "lunch" || page === "dining" || page === "favorite" ? " is-listing" : ""}`}>
+    <div
+      className={`site-shell${page === "home" ? " is-home" : ""}${page === "lunch" || page === "dining" || page === "favorite" ? " is-listing" : ""}`}
+    >
       <div className="page-content">
         {page === "home" && (
           <main className="home-page">
@@ -946,7 +1057,11 @@ export default function App() {
         )}
         {page === "lunch" && (
           <main className="listing-page listing-fixed">
-            <PageHeader title="도시락" back={() => navigate("home")} onGalleryOpen={() => setGalleryOpen(true)} />
+            <PageHeader
+              title="도시락"
+              back={() => navigate("home")}
+              onGalleryOpen={() => setGalleryOpen(true)}
+            />
             <SmallBanner variant="lunch" onRandom={() => openRandom("lunch")} />
             <div className="filter-panel">
               <Filters
@@ -956,7 +1071,11 @@ export default function App() {
                 pick={pickLunchCuisine}
               />
             </div>
-            <section ref={menuScrollRef} className="menu-scroll-region" aria-label="도시락 메뉴 목록">
+            <section
+              ref={menuScrollRef}
+              className="menu-scroll-region"
+              aria-label="도시락 메뉴 목록"
+            >
               {shown.length ? (
                 cards
               ) : (
@@ -971,7 +1090,11 @@ export default function App() {
         )}
         {page === "dining" && (
           <main className="listing-page listing-fixed">
-            <PageHeader title="저녁 & 술안주" back={() => navigate("home")} onGalleryOpen={() => setGalleryOpen(true)} />
+            <PageHeader
+              title="저녁 & 술안주"
+              back={() => navigate("home")}
+              onGalleryOpen={() => setGalleryOpen(true)}
+            />
             <SmallBanner
               variant="dining"
               onRandom={() => openRandom("dining")}
@@ -990,7 +1113,11 @@ export default function App() {
                 pick={pickDrink}
               />
             </div>
-            <section ref={menuScrollRef} className="menu-scroll-region" aria-label="저녁 및 술안주 메뉴 목록">
+            <section
+              ref={menuScrollRef}
+              className="menu-scroll-region"
+              aria-label="저녁 및 술안주 메뉴 목록"
+            >
               {shown.length ? (
                 cards
               ) : (
@@ -1001,9 +1128,17 @@ export default function App() {
         )}
         {page === "favorite" && (
           <main className="listing-page listing-fixed">
-            <PageHeader title="즐겨찾기" back={() => navigate("home")} onGalleryOpen={() => setGalleryOpen(true)} />
+            <PageHeader
+              title="즐겨찾기"
+              back={() => navigate("home")}
+              onGalleryOpen={() => setGalleryOpen(true)}
+            />
             <SmallBanner variant="favorite" />
-            <section ref={menuScrollRef} className="menu-scroll-region" aria-label="즐겨찾기 음식 목록">
+            <section
+              ref={menuScrollRef}
+              className="menu-scroll-region"
+              aria-label="즐겨찾기 음식 목록"
+            >
               {shown.length ? (
                 cards
               ) : (
