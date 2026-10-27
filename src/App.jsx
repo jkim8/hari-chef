@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Heart,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import {
   menus,
+  LUNCH_FILTERS,
   DINNER_FILTERS,
   DRINK_FILTERS,
   normalizeMenuId,
@@ -590,6 +591,8 @@ export default function App() {
   const [fromPage, setFromPage] = useState("home");
   const [chosen, setChosen] = useState(null);
   const [cuisine, setCuisine] = useState("전체");
+  const [lunchCuisine, setLunchCuisine] = useState("전체");
+  const menuScrollRef = useRef(null);
   const [drink, setDrink] = useState("전체");
   const [favs, setFavs] = useState(favoritesInitial);
   const [toast, setToast] = useState("");
@@ -619,10 +622,10 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [page, chosen?.id]);
 
-  // 홈 화면에서만 문서 스크롤을 잠급니다.
-  // 다른 페이지로 이동하면 원래 overflow 설정을 복원합니다.
+  // 홈/메뉴 목록에서만 문서 스크롤을 잠가서 상단이 움직이지 않게 합니다.
+  // 목록에서는 카드 영역(.menu-scroll-region)만 스크롤 가능합니다.
   useEffect(() => {
-    if (page !== "home") return;
+    if (page !== "home" && page !== "lunch" && page !== "dining") return;
 
     const html = document.documentElement;
     const body = document.body;
@@ -693,18 +696,30 @@ export default function App() {
       title: `준호야, ${menu.name} 해줘 ♡`,
       text: orderMessage(menu, drink),
     });
+  const resetMenuScroll = () => {
+    if (menuScrollRef.current) menuScrollRef.current.scrollTop = 0;
+  };
+  const pickLunchCuisine = (value) => {
+    setLunchCuisine(value);
+    resetMenuScroll();
+  };
   const pickCuisine = (value) => {
+    resetMenuScroll();
     setCuisine(value);
     // 요리 종류를 선택하면 이전 술 필터를 지워서 결과가 혼동되지 않도록 해요.
     setDrink("전체");
   };
   const pickDrink = (value) => {
+    resetMenuScroll();
     setDrink(value);
     // 술 종류를 선택하면 저녁/술안주를 모두 대상으로 검색해요.
     setCuisine("전체");
   };
   const shown = useMemo(() => {
-    if (page === "lunch") return menus.filter((m) => m.category === "lunch");
+    if (page === "lunch")
+      return menus.filter(
+        (m) => m.category === "lunch" && (lunchCuisine === "전체" || m.cuisine === lunchCuisine),
+      );
     if (page === "favorite")
       return favs.map((id) => menus.find((m) => m.id === id)).filter(Boolean);
     if (page !== "dining") return [];
@@ -725,7 +740,7 @@ export default function App() {
           y = featured.indexOf(b.id);
         return (x < 0 ? 999 : x) - (y < 0 ? 999 : y);
       });
-  }, [page, cuisine, drink, favs]);
+  }, [page, cuisine, lunchCuisine, drink, favs]);
 
   const openRandom = (type) => {
     setRandomType(type);
@@ -736,7 +751,7 @@ export default function App() {
   };
   const randomCandidates =
     randomType === "lunch"
-      ? menus.filter((item) => item.category === "lunch")
+      ? (page === "lunch" ? shown : menus.filter((item) => item.category === "lunch"))
       : shown.filter(
           (item) => item.category === "dinner" || item.category === "snack",
         );
@@ -775,7 +790,7 @@ export default function App() {
     </div>
   );
   return (
-    <div className={`site-shell${page === "home" ? " is-home" : ""}`}>
+    <div className={`site-shell${page === "home" ? " is-home" : ""}${page === "lunch" || page === "dining" ? " is-listing" : ""}`}>
       <div className="page-content">
         {page === "home" && (
           <main className="home-page">
@@ -836,20 +851,32 @@ export default function App() {
           </main>
         )}
         {page === "lunch" && (
-          <main className="listing-page">
+          <main className="listing-page listing-fixed">
             <PageHeader title="도시락" back={() => navigate("home")} />
             <SmallBanner variant="lunch" onRandom={() => openRandom("lunch")} />
-            {shown.length ? (
-              cards
-            ) : (
-              <p className="empty-message">
-                도시락 메뉴를 추가하면 랜덤 도시락도 바로 쓸 수 있어요 ♡
-              </p>
-            )}
+            <div className="filter-panel">
+              <Filters
+                heading="도시락 종류"
+                values={LUNCH_FILTERS}
+                chosen={lunchCuisine}
+                pick={pickLunchCuisine}
+              />
+            </div>
+            <section ref={menuScrollRef} className="menu-scroll-region" aria-label="도시락 메뉴 목록">
+              {shown.length ? (
+                cards
+              ) : (
+                <p className="empty-message">
+                  {lunchCuisine === "전체"
+                    ? "도시락 메뉴를 추가하면 랜덤 도시락도 바로 쓸 수 있어요 ♡"
+                    : "아직 이 종류의 도시락이 없어요 ♡"}
+                </p>
+              )}
+            </section>
           </main>
         )}
         {page === "dining" && (
-          <main className="listing-page">
+          <main className="listing-page listing-fixed">
             <PageHeader title="저녁 & 술안주" back={() => navigate("home")} />
             <SmallBanner
               variant="dining"
@@ -869,11 +896,13 @@ export default function App() {
                 pick={pickDrink}
               />
             </div>
-            {shown.length ? (
-              cards
-            ) : (
-              <p className="empty-message">아직 준비 중인 메뉴예요 ♡</p>
-            )}
+            <section ref={menuScrollRef} className="menu-scroll-region" aria-label="저녁 및 술안주 메뉴 목록">
+              {shown.length ? (
+                cards
+              ) : (
+                <p className="empty-message">아직 준비 중인 메뉴예요 ♡</p>
+              )}
+            </section>
           </main>
         )}
         {page === "favorite" && (

@@ -827,3 +827,146 @@ span.filter-chip {
     max-height: 76%;
   }
 }
+
+
+/* ───────────────────────────────────────────────────
+   v12 | 도시락/저녁 상단 고정 + 음식 카드 영역에서만 스크롤
+   홈·즐겨찾기·상세·랜덤 팝업의 기존 디자인은 건드리지 않아요.
+   ─────────────────────────────────────────────────── */
+.site-shell.is-listing {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.site-shell.is-listing > .page-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding-bottom: calc(71px + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+}
+
+.site-shell.is-listing .listing-page.listing-fixed {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 14px 0;
+  overflow: hidden;
+}
+
+/* 스크롤하지 않는 상단의 영역을 조금 더 컴팩트하게 */
+.site-shell.is-listing .page-header {
+  flex: 0 0 51px;
+  height: 51px;
+}
+
+.site-shell.is-listing .banner-row.banner-with-random {
+  flex: 0 0 105px;
+  height: 105px;
+  min-height: 0;
+  margin: 2px 0 9px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.site-shell.is-listing .banner-with-random .banner-mascot {
+  height: 98px;
+}
+
+.site-shell.is-listing .banner-with-random .banner-bubble {
+  padding: 7px 9px;
+  font-size: 11px;
+  line-height: 1.48;
+}
+
+.site-shell.is-listing .banner-with-random .banner-random-entry {
+  min-height: 68px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.site-shell.is-listing .banner-with-random .banner-random-entry img {
+  width: 42px;
+  height: 42px;
+}
+
+.site-shell.is-listing .filter-panel {
+  flex: 0 0 auto;
+  margin: 0 0 8px;
+  padding: 10px 11px;
+  border-radius: 18px;
+}
+
+.site-shell.is-listing .filter-set h3 {
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.site-shell.is-listing .filter-set + .filter-set {
+  margin-top: 9px;
+}
+
+.site-shell.is-listing .filter-chips {
+  gap: 5px;
+}
+
+.site-shell.is-listing .filter-chip {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+/* 카드만 별도의 터치 스크롤 영역: 상단 필터/배너는 움직이지 않음 */
+.site-shell.is-listing .menu-scroll-region {
+  flex: 1 1 0%;
+  min-height: 0;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: #f5b4c5 transparent;
+  padding: 3px 2px 14px;
+}
+
+.site-shell.is-listing .menu-scroll-region .food-grid {
+  align-content: start;
+}
+
+@media (max-width: 360px) {
+  .site-shell.is-listing .listing-page.listing-fixed {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .site-shell.is-listing .filter-chip {
+    padding: 6px 8px;
+  }
+}
+
+@media (max-height: 620px) {
+  .site-shell.is-listing .page-header {
+    flex-basis: 44px;
+    height: 44px;
+  }
+  .site-shell.is-listing .banner-row.banner-with-random {
+    flex-basis: 86px;
+    height: 86px;
+    margin-bottom: 6px;
+  }
+  .site-shell.is-listing .banner-with-random .banner-mascot {
+    height: 80px;
+  }
+  .site-shell.is-listing .filter-panel {
+    padding: 7px 9px;
+    margin-bottom: 5px;
+  }
+  .site-shell.is-listing .filter-set + .filter-set {
+    margin-top: 6px;
+  }
+}

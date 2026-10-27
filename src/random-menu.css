@@ -469,7 +469,7 @@
   max-height: 350px;
   min-height: 0;
   margin: 0 auto 7px;
-  border-radius: 16px;
+  border-radius: 70px;
   overflow: hidden;
 }
 .random-dialog.has-result .random-food-image.food-photo img {
