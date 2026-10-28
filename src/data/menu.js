@@ -87,8 +87,9 @@ export const menus = [
       "후추 약간",
       "우동사리 또는 라면사리",
       "양념장: 다진 마늘 2T",
-      "양념장: 고춧가루 3T",
-      "양념장: 설탕 3T",
+      "양념장: 고춧가루 1T",
+      "양념장: 청양 고춧가루 2T",
+      "양념장: 설탕 2T",
       "양념장: 간장 4T",
       "양념장: 올리고당 4T",
       "양념장: 굴소스 1T",
@@ -1901,9 +1902,9 @@ export const menus = [
     image: "menu/54.png",
     emoji: "🌭",
     tint: "#ffe1d6",
-    drinks: [
-    ],
-    description: "칼집 낸 비엔나소세지와 아삭한 양파·파프리카를 달콤매콤한 소스에 볶은 도시락 단골 반찬.",
+    drinks: [],
+    description:
+      "칼집 낸 비엔나소세지와 아삭한 양파·파프리카를 달콤매콤한 소스에 볶은 도시락 단골 반찬.",
     ingredients: [
       "비엔나소세지 18~20개",
       "양파 1/2개",
@@ -1936,9 +1937,9 @@ export const menus = [
     image: "menu/55.png",
     emoji: "🥬",
     tint: "#e8f1db",
-    drinks: [
-    ],
-    description: "고소한 한입 주먹밥을 싱싱한 상추로 감싸 매콤달콤한 참치쌈장을 얹은 건강한 도시락.",
+    drinks: [],
+    description:
+      "고소한 한입 주먹밥을 싱싱한 상추로 감싸 매콤달콤한 참치쌈장을 얹은 건강한 도시락.",
     ingredients: [
       "참치쌈장: 참치통조림 150g (1캔)",
       "참치쌈장: 양파 1/4개",
@@ -1977,9 +1978,9 @@ export const menus = [
     image: "menu/56.png",
     emoji: "🍜",
     tint: "#e6e4d5",
-    drinks: [
-    ],
-    description: "가쓰오부시 향이 살아 있는 차가운 장국에 메밀면과 무즙·와사비·김을 올린 시원한 소바.",
+    drinks: [],
+    description:
+      "가쓰오부시 향이 살아 있는 차가운 장국에 메밀면과 무즙·와사비·김을 올린 시원한 소바.",
     ingredients: [
       "가쓰오부시 1줌",
       "메밀소바 장국 1컵",
@@ -2010,9 +2011,9 @@ export const menus = [
     image: "menu/57.png",
     emoji: "🍛",
     tint: "#ffe6d2",
-    drinks: [
-    ],
-    description: "바삭한 시판 돈까스에 달콤한 경양식 소스를 듬뿍 얹고 양배추 샐러드와 따뜻한 스프를 곁들인 한 접시.",
+    drinks: [],
+    description:
+      "바삭한 시판 돈까스에 달콤한 경양식 소스를 듬뿍 얹고 양배추 샐러드와 따뜻한 스프를 곁들인 한 접시.",
     ingredients: [
       "시판 돈까스 1장 (냉장 또는 냉동)",
       "시판 돈까스 스프 1인분",
@@ -2033,7 +2034,6 @@ export const menus = [
     ],
     note: "돈까스·스프·소스·드레싱 모두 시판 제품을 사용해 간편하게 만드는 레시피예요.",
   },
-
 ];
 
 export const categories = {
