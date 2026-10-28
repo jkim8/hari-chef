@@ -2115,7 +2115,7 @@ export const menus = [
     servings: 1,
     category: "lunch",
     cuisine: "한식",
-    name: "냉면 만두 도시락",
+    name: "냉면 & 만두",
     image: "menu/60.png",
     emoji: "🍜",
     tint: "#e4efdb",
