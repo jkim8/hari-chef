@@ -8,6 +8,8 @@ import {
   X,
   Share2,
   ArrowRight,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import {
   menus,
@@ -21,6 +23,18 @@ import "./random-menu.css";
 
 const asset = (path) => `${import.meta.env.BASE_URL}${path}`;
 const FAV_KEY = "hari-chef-favorites-v3";
+const VIEW_KEY = "hari-chef-list-view-v1";
+const initialViews = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(VIEW_KEY) || "{}");
+    return {
+      lunch: stored.lunch === "list" ? "list" : "grid",
+      dining: stored.dining === "list" ? "list" : "grid",
+    };
+  } catch {
+    return { lunch: "grid", dining: "grid" };
+  }
+};
 const favoritesInitial = () => {
   try {
     const value = JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
@@ -35,22 +49,26 @@ const favoritesInitial = () => {
 };
 const featured = ["1", "2", "3", "4"];
 
-function orderMessage(menu, selectedDrink) {
-  // 저녁/술안주 모두 drinks가 있으므로 카테고리와 관계없이 술을 선택해요.
-  const drink = menu.drinks?.includes(selectedDrink)
-    ? selectedDrink
-    : menu.drinks?.[0];
+function orderMessage(menu, selectedDrinks = [], noAlcohol = false) {
+  // 도시락은 술 내용 없이 보내고, 저녁/술안주는 팝업에서 고른 술만 보내요.
+  const drinkLine =
+    menu.category === "lunch"
+      ? null
+      : noAlcohol
+        ? "🥤 오늘은 No 술! 음식만 맛있게 먹자 ♡"
+        : selectedDrinks.length
+          ? `🍷 같이 마실 술: ${selectedDrinks.join(" · ")}`
+          : null;
+
   return [
     "💗 하리씨의 명예요리사 준호에게 💗",
     "",
     `준호야, 나 ${menu.name} 먹고 싶어! 🥹💕`,
     "맛있게 만들어 줄 거지? ♡",
-    drink ? `🍷 같이 마실 술: ${drink}` : "",
+    ...(drinkLine ? ["", drinkLine] : []),
     "",
     `🍽️ 메뉴 구경하기: ${makeMenuLink(menu)}`,
-  ]
-    .filter((line) => line !== null)
-    .join("\n");
+  ].join("\n");
 }
 
 // 레시피 전체를 공유할 수 있도록 재료와 조리 순서를 메시지로 구성해요.
@@ -282,10 +300,49 @@ function BottomNav({ page, change, favorites }) {
     </nav>
   );
 }
-function Filters({ heading, values, chosen, pick }) {
+function ViewModeToggle({ mode, onChange }) {
+  return (
+    <div className="menu-view-toggle" role="group" aria-label="메뉴 보기 방식">
+      <button
+        type="button"
+        className={mode === "grid" ? "active" : ""}
+        onClick={() => onChange("grid")}
+        title="2열 카드 보기"
+        aria-label="두 열 카드 보기"
+        aria-pressed={mode === "grid"}
+      >
+        <LayoutGrid size={18} strokeWidth={2.1} />
+      </button>
+      <button
+        type="button"
+        className={mode === "list" ? "active" : ""}
+        onClick={() => onChange("list")}
+        title="한 줄 리스트 보기"
+        aria-label="한 열 리스트 보기"
+        aria-pressed={mode === "list"}
+      >
+        <List size={19} strokeWidth={2.2} />
+      </button>
+    </div>
+  );
+}
+
+function Filters({
+  heading,
+  values,
+  chosen,
+  pick,
+  viewMode,
+  onViewModeChange,
+}) {
   return (
     <section className="filter-set">
-      <h3>{heading}</h3>
+      <div className="filter-heading-row">
+        <h3>{heading}</h3>
+        {onViewModeChange && (
+          <ViewModeToggle mode={viewMode} onChange={onViewModeChange} />
+        )}
+      </div>
       <div className="filter-chips">
         {values.map((v) => (
           <button
@@ -378,6 +435,7 @@ const CHEF_CHARACTERS = [
   { src: "art/chef-lunch.png", name: "도시락 요리사" },
   { src: "art/chef-wine.png", name: "저녁 요리사" },
   { src: "art/chef-favorite.png", name: "하트 요리사" },
+  { src: "art/chef-cheers.png", name: "한잔하리냥" },
   { src: "art/quote-chibi-cutout.png", name: "명예요리사" },
 ];
 
@@ -689,6 +747,124 @@ function RandomMenuModal({
   );
 }
 
+// "준호한테 해달라고 하기"를 누르면 저녁/술안주에서만 나타나는 술 선택 팝업.
+function OrderDrinkModal({ menu, close, confirm }) {
+  const [selectedDrinks, setSelectedDrinks] = useState([]);
+  const [noAlcohol, setNoAlcohol] = useState(false);
+  const recommended = menu.drinks || [];
+  const options = [
+    ...new Set([
+      ...recommended,
+      ...DRINK_FILTERS.filter((item) => item !== "전체"),
+    ]),
+  ];
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [close]);
+
+  const toggleDrink = (name) => {
+    setNoAlcohol(false);
+    setSelectedDrinks((current) =>
+      current.includes(name)
+        ? current.filter((value) => value !== name)
+        : [...current, name],
+    );
+  };
+
+  const toggleNoAlcohol = () => {
+    setNoAlcohol((current) => !current);
+    setSelectedDrinks([]);
+  };
+
+  return (
+    <div
+      className="order-drink-overlay"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+    >
+      <section
+        className="order-drink-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="order-drink-title"
+      >
+        <button
+          type="button"
+          className="order-drink-close"
+          onClick={close}
+          aria-label="술 선택 닫기"
+        >
+          <X size={22} />
+        </button>
+
+        <img
+          className="order-drink-mascot"
+          src={asset("art/chef-cheers.png")}
+          alt="와인잔을 든 하리씨와 맥주잔을 든 고양이"
+        />
+        <h2 id="order-drink-title">오늘은 어떤 술 마실까? 🍷</h2>
+        <p className="order-drink-subtitle">
+          <strong>{menu.name}</strong>이랑 같이 마실 술을 골라줘! ♡
+        </p>
+        <p className="order-drink-hint">
+          여러 개 골라도 돼 💗 추천 술은 ⭐ 표시!
+        </p>
+
+        <div className="order-drink-options" aria-label="마시고 싶은 술 선택">
+          <label
+            className={`order-drink-option order-drink-none${noAlcohol ? " selected" : ""}`}
+          >
+            <input
+              type="checkbox"
+              checked={noAlcohol}
+              onChange={toggleNoAlcohol}
+            />
+            <span>🥤 No 술 (술 없이 먹을래!)</span>
+          </label>
+          {options.map((name) => (
+            <label
+              className={`order-drink-option${selectedDrinks.includes(name) ? " selected" : ""}`}
+              key={name}
+            >
+              <input
+                type="checkbox"
+                checked={selectedDrinks.includes(name)}
+                onChange={() => toggleDrink(name)}
+              />
+              <span>{name}</span>
+              {recommended.includes(name) && (
+                <span className="order-drink-recommended" aria-label="추천 술">
+                  ⭐
+                </span>
+              )}
+            </label>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          className="order-drink-send"
+          disabled={!noAlcohol && selectedDrinks.length === 0}
+          onClick={() => confirm(menu, selectedDrinks, noAlcohol)}
+        >
+          💌 준호한테 보내기
+        </button>
+      </section>
+    </div>
+  );
+}
+
 function DetailPage({ menu, back, liked, toggle, shareRecipe, shareOrder }) {
   const steps = menu.steps || [];
   return (
@@ -778,8 +954,16 @@ function DetailPage({ menu, back, liked, toggle, shareRecipe, shareOrder }) {
 
 export default function App() {
   const [page, setPage] = useState("home");
+  const [viewModes, setViewModes] = useState(initialViews);
+  const changeViewMode = (section, mode) => {
+    setViewModes((current) => ({ ...current, [section]: mode }));
+  };
+  useEffect(() => {
+    localStorage.setItem(VIEW_KEY, JSON.stringify(viewModes));
+  }, [viewModes]);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [orderMenu, setOrderMenu] = useState(null);
   const [fromPage, setFromPage] = useState("home");
   const [chosen, setChosen] = useState(null);
   const [cuisine, setCuisine] = useState("전체");
@@ -890,11 +1074,24 @@ export default function App() {
       title: `${menu.name} 레시피 💗`,
       text: recipeMessage(menu),
     });
-  const shareOrder = (menu) =>
-    openNativeShare({
+  const shareOrder = (menu) => {
+    if (menu.category === "lunch") {
+      // 🍱 도시락은 팝업과 술 선택 없이 바로 공유해요.
+      return openNativeShare({
+        title: `준호야, ${menu.name} 해줘 ♡`,
+        text: orderMessage(menu),
+      });
+    }
+    // 🍷 저녁과 술안주에만 술 선택 팝업을 띄워요.
+    setOrderMenu(menu);
+  };
+  const shareOrderWithDrinks = (menu, drinks, noAlcohol) => {
+    setOrderMenu(null);
+    return openNativeShare({
       title: `준호야, ${menu.name} 해줘 ♡`,
-      text: orderMessage(menu, drink),
+      text: orderMessage(menu, drinks, noAlcohol),
     });
+  };
   const resetMenuScroll = () => {
     if (menuScrollRef.current) menuScrollRef.current.scrollTop = 0;
   };
@@ -979,8 +1176,14 @@ export default function App() {
     open(randomMenu);
   };
 
+  // 도시락/저녁 각각 카드 보기와 한 줄 리스트 보기를 기억해요.
+  // 즐겨찾기는 기존의 두 열 카드 보기를 그대로 유지합니다.
+  const activeViewMode =
+    page === "lunch" || page === "dining" ? viewModes[page] : "grid";
   const cards = (
-    <div className="food-grid">
+    <div
+      className={`food-grid${activeViewMode === "list" ? " food-grid--list" : ""}`}
+    >
       {shown.map((menu) => (
         <FoodCard
           key={menu.id}
@@ -1069,6 +1272,8 @@ export default function App() {
                 values={LUNCH_FILTERS}
                 chosen={lunchCuisine}
                 pick={pickLunchCuisine}
+                viewMode={viewModes.lunch}
+                onViewModeChange={(mode) => changeViewMode("lunch", mode)}
               />
             </div>
             <section
@@ -1105,6 +1310,8 @@ export default function App() {
                 values={DINNER_FILTERS}
                 chosen={cuisine}
                 pick={pickCuisine}
+                viewMode={viewModes.dining}
+                onViewModeChange={(mode) => changeViewMode("dining", mode)}
               />
               <Filters
                 heading="술 종류"
@@ -1170,6 +1377,13 @@ export default function App() {
       </div>
       {page !== "detail" && (
         <BottomNav page={page} change={navigate} favorites={favs} />
+      )}
+      {orderMenu && (
+        <OrderDrinkModal
+          menu={orderMenu}
+          close={() => setOrderMenu(null)}
+          confirm={shareOrderWithDrinks}
+        />
       )}
       {randomOpen && (
         <RandomMenuModal

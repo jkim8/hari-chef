@@ -1287,3 +1287,393 @@ span.filter-chip {
   padding: 9px 9px 11px;
   gap: 5px;
 }
+
+/* ── 준호한테 해달라고 하기: 술 선택 팝업 ── */
+.order-drink-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+  background: rgba(45, 26, 40, 0.67);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+.order-drink-dialog {
+  position: relative;
+  width: min(100%, 410px);
+  max-height: min(94dvh, 770px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 25px;
+  padding: 16px 19px 20px;
+  background: linear-gradient(160deg, #fff8fa 0%, #ffe7ef 100%);
+  box-shadow: 0 16px 50px rgba(67, 22, 50, 0.35);
+  text-align: center;
+  scrollbar-width: thin;
+}
+.order-drink-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  z-index: 2;
+  width: 35px;
+  height: 35px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #a85878;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.order-drink-mascot {
+  display: block;
+  width: min(60%, 206px);
+  height: clamp(112px, 21dvh, 175px);
+  object-fit: contain;
+  margin: 0 auto 4px;
+  filter: drop-shadow(0 5px 5px rgba(237, 118, 159, 0.12));
+}
+.order-drink-dialog h2 {
+  margin: 2px 0 5px;
+  font-size: clamp(18px, 5vw, 22px);
+  font-weight: 850;
+  color: #eb4d84;
+}
+.order-drink-subtitle {
+  margin: 0;
+  color: #7e5060;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.order-drink-subtitle strong {
+  color: #d83d75;
+}
+.order-drink-hint {
+  font-size: 11px;
+  color: #ad7e8c;
+  margin: 5px 0 10px;
+}
+.order-drink-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  text-align: left;
+}
+.order-drink-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1.5px solid #f5cbd8;
+  border-radius: 12px;
+  background: #fffafcf2;
+  color: #784959;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.order-drink-option.selected {
+  border-color: #f26596;
+  background: #ffe0eb;
+  color: #d33b73;
+}
+.order-drink-option input[type="checkbox"] {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #ec5689;
+  cursor: pointer;
+}
+.order-drink-option span:nth-child(2) {
+  min-width: 0;
+}
+.order-drink-none {
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+.order-drink-recommended {
+  margin-left: auto;
+  font-size: 11px;
+}
+.order-drink-send {
+  width: 100%;
+  min-height: 47px;
+  margin-top: 13px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #f36498, #ed4e80);
+  color: white;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 5px 15px #ef609150;
+  cursor: pointer;
+}
+.order-drink-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+@media (max-height: 630px) {
+  .order-drink-dialog {
+    padding: 9px 15px 13px;
+  }
+  .order-drink-mascot {
+    height: 90px;
+  }
+  .order-drink-dialog h2 {
+    font-size: 18px;
+  }
+  .order-drink-option {
+    min-height: 35px;
+    padding: 6px 8px;
+  }
+  .order-drink-options {
+    gap: 6px;
+  }
+  .order-drink-send {
+    min-height: 42px;
+    margin-top: 8px;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   v28 | 상단을 줄여 음식 목록을 더 많이 보여주고, 목록/그리드 전환 추가
+   도시락·저녁만 적용 (상세·랜덤·캐릭터 갤러리·즐겨찾기는 기존 동작 유지)
+   ──────────────────────────────────────────────────────────────────── */
+.site-shell.is-listing .page-header {
+  flex: 0 0 44px;
+  height: 44px;
+}
+.site-shell.is-listing .page-header h1 {
+  font-size: 21px;
+}
+.site-shell.is-listing .header-mini-button {
+  width: 42px;
+  height: 43px;
+}
+.site-shell.is-listing .header-mini-button .header-mini {
+  width: 39px;
+  height: 42px;
+}
+/* 도시락·저녁의 큰 배너를 105px → 80px로 축소 */
+.site-shell.is-listing .banner-row.banner-with-random {
+  flex: 0 0 80px;
+  height: 80px;
+  min-height: 0;
+  margin: 2px 0 7px;
+  padding: 4px 9px 4px 3px;
+  gap: 5px;
+  grid-template-columns: minmax(65px, 27%) minmax(0, 1fr) 60px;
+}
+.site-shell.is-listing .banner-with-random .banner-mascot {
+  height: 74px;
+}
+.site-shell.is-listing .banner-with-random .banner-mascot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.site-shell.is-listing .banner-with-random .banner-bubble {
+  padding: 6px 8px;
+  border-radius: 14px;
+  font-size: 10px;
+  line-height: 1.37;
+}
+.site-shell.is-listing .banner-with-random .banner-random-entry {
+  width: 60px;
+  min-height: 62px;
+  padding: 3px 2px;
+  border-radius: 12px;
+}
+.site-shell.is-listing .banner-with-random .banner-random-entry img {
+  width: 36px;
+  height: 36px;
+}
+.site-shell.is-listing .banner-with-random .banner-random-entry span {
+  font-size: 9px;
+}
+.site-shell.is-listing .filter-panel {
+  margin-bottom: 6px;
+  padding: 7px 10px;
+  border-radius: 17px;
+}
+.site-shell.is-listing .filter-set + .filter-set {
+  margin-top: 7px;
+}
+.site-shell.is-listing .filter-set h3 {
+  font-size: 12.5px;
+  margin: 0 0 5px;
+}
+.site-shell.is-listing .filter-chips {
+  gap: 4px;
+}
+.site-shell.is-listing .filter-chip {
+  padding: 5px 9px;
+  font-size: 10.5px;
+}
+/* 보기 전환 버튼은 종류 제목과 같은 행에 배치하여 추가 높이를 차지하지 않음 */
+.site-shell.is-listing .filter-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  margin-bottom: 4px;
+}
+.site-shell.is-listing .filter-heading-row h3 {
+  margin: 0;
+}
+.menu-view-toggle {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 3px;
+  border-radius: 11px;
+  padding: 3px;
+  background: #f6ebef;
+}
+.menu-view-toggle button {
+  width: 30px;
+  height: 27px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #a98290;
+  cursor: pointer;
+}
+.menu-view-toggle button.active {
+  background: #f75c8d;
+  color: white;
+  box-shadow: 0 1px 5px #ee78a030;
+}
+.menu-view-toggle button:focus-visible {
+  outline: 2px solid #e94781;
+  outline-offset: 2px;
+}
+/* 기본은 기존 두 열 카드, 전환 시 사진(왼쪽)+설명(오른쪽) 한 줄 */
+.site-shell.is-listing .menu-scroll-region .food-grid--list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+}
+.food-grid--list .food-card,
+.food-grid--list .food-card--lunch {
+  align-self: stretch;
+  min-height: 108px;
+  border-radius: 16px;
+}
+.food-grid--list .card-open,
+.food-grid--list .food-card--lunch .card-open {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 108px;
+}
+.food-grid--list .food-card .food-photo {
+  flex: 0 0 112px;
+  width: 112px;
+  height: 112px;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+.food-grid--list .food-caption,
+.food-grid--list .food-card--lunch .food-caption {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 47px 12px 13px;
+}
+.food-grid--list .food-caption strong {
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.food-grid--list .food-caption .food-kind {
+  font-size: 10.5px;
+}
+.food-grid--list .food-caption .food-drinks {
+  font-size: 10.5px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.food-grid--list .food-card-heart {
+  top: 8px;
+  right: 8px;
+}
+@media (max-width: 360px) {
+  .site-shell.is-listing .banner-row.banner-with-random {
+    grid-template-columns: 63px minmax(0, 1fr) 54px;
+    gap: 3px;
+  }
+  .site-shell.is-listing .banner-with-random .banner-random-entry {
+    width: 54px;
+  }
+  .site-shell.is-listing .banner-with-random .banner-bubble {
+    font-size: 9.5px;
+    padding: 5px 6px;
+  }
+  .food-grid--list .food-card .food-photo {
+    flex-basis: 94px;
+    width: 94px;
+    height: 105px;
+  }
+  .food-grid--list .food-caption,
+  .food-grid--list .food-card--lunch .food-caption {
+    padding: 8px 43px 8px 10px;
+  }
+  .food-grid--list .food-caption strong {
+    font-size: 13.5px;
+  }
+}
+@media (max-height: 620px) {
+  .site-shell.is-listing .page-header {
+    flex-basis: 41px;
+    height: 41px;
+  }
+  .site-shell.is-listing .banner-row.banner-with-random {
+    flex-basis: 72px;
+    height: 72px;
+  }
+  .site-shell.is-listing .banner-with-random .banner-mascot {
+    height: 67px;
+  }
+  .site-shell.is-listing .banner-with-random .banner-random-entry {
+    min-height: 57px;
+  }
+  .site-shell.is-listing .banner-with-random .banner-random-entry img {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* 술 종류에는 보기 전환 버튼이 없으므로 제목 행을 더 얇게 */
+.site-shell.is-listing .filter-set:not(:first-child) .filter-heading-row {
+  min-height: 0;
+  margin-bottom: 5px;
+}
+.site-shell.is-listing .filter-chip {
+  padding: 4px 9px;
+}
+.site-shell.is-listing .menu-view-toggle {
+  padding: 2px;
+}
+.site-shell.is-listing .menu-view-toggle button {
+  height: 26px;
+}
