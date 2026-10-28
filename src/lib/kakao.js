@@ -30,7 +30,7 @@ export function tryKakaoShare(menu, message) {
     sdk.Share.sendDefault({
       objectType: "feed",
       content: {
-        title: `💌 준호씨, ${menu.name} 해줘!`,
+        title: `💌 준호씨, ${menu.name} 해줘요!`,
         description: message.substring(0, 200),
         imageUrl: new URL(
           `${import.meta.env.BASE_URL}${menu.image}`,

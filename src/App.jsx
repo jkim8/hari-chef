@@ -65,7 +65,7 @@ function orderMessage(menu, selectedDrinks = [], noAlcohol = false) {
   return [
     "💗 하리씨의 명예요리사 준호에게 💗",
     "",
-    `준호씨, 나 ${menu.name} 먹고 싶어! 🥹💕`,
+    `준호씨, 나 ${menu.name} 먹고 싶어요! 🥹💕`,
     "맛있게 만들어 줄 거지? ♡",
     ...(drinkLine ? ["", drinkLine] : []),
     "",
@@ -1197,7 +1197,7 @@ export default function App() {
     if (menu.category === "lunch") {
       // 🍱 도시락은 팝업과 술 선택 없이 바로 공유해요.
       return openNativeShare({
-        title: `준호씨, ${menu.name} 해줘 ♡`,
+        title: `준호씨, ${menu.name} 해줘요 ♡`,
         text: orderMessage(menu),
       });
     }
@@ -1207,7 +1207,7 @@ export default function App() {
   const shareOrderWithDrinks = (menu, drinks, noAlcohol) => {
     setOrderMenu(null);
     return openNativeShare({
-      title: `준호씨, ${menu.name} 해줘 ♡`,
+      title: `준호씨, ${menu.name} 해줘요 ♡`,
       text: orderMessage(menu, drinks, noAlcohol),
     });
   };
