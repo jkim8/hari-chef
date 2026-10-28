@@ -10,6 +10,8 @@ import {
   ArrowRight,
   LayoutGrid,
   List,
+  Search,
+  ZoomIn,
 } from "lucide-react";
 import {
   menus,
@@ -334,14 +336,32 @@ function Filters({
   pick,
   viewMode,
   onViewModeChange,
+  searchOpen = false,
+  searchValue = "",
+  onSearchToggle,
+  onSearchChange,
 }) {
   return (
     <section className="filter-set">
       <div className="filter-heading-row">
         <h3>{heading}</h3>
-        {onViewModeChange && (
-          <ViewModeToggle mode={viewMode} onChange={onViewModeChange} />
-        )}
+        <div className="filter-heading-actions">
+          {onSearchToggle && (
+            <button
+              type="button"
+              className={`menu-search-toggle${searchOpen ? " active" : ""}`}
+              aria-label={searchOpen ? "메뉴 검색 닫기" : "메뉴 검색 열기"}
+              aria-expanded={searchOpen}
+              onClick={onSearchToggle}
+              title="요리 이름 또는 재료 검색"
+            >
+              <Search size={19} strokeWidth={2.2} />
+            </button>
+          )}
+          {onViewModeChange && (
+            <ViewModeToggle mode={viewMode} onChange={onViewModeChange} />
+          )}
+        </div>
       </div>
       <div className="filter-chips">
         {values.map((v) => (
@@ -355,6 +375,28 @@ function Filters({
           </button>
         ))}
       </div>
+      {searchOpen && (
+        <div className="menu-search-field">
+          <Search size={17} aria-hidden="true" />
+          <input
+            type="search"
+            autoFocus
+            value={searchValue}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="음식 이름이나 재료를 검색해봐 ♡"
+            aria-label="음식 이름 또는 재료 검색"
+          />
+          {searchValue && (
+            <button
+              type="button"
+              onClick={() => onSearchChange("")}
+              aria-label="검색어 지우기"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -865,12 +907,74 @@ function OrderDrinkModal({ menu, close, confirm }) {
   );
 }
 
-function DetailPage({ menu, back, liked, toggle, shareRecipe, shareOrder }) {
+// 상세 화면의 큰 사진과 재료 옆 작은 사진을 누르면 원본 전체를 보여줘요.
+function MenuImageModal({ menu, close }) {
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") close();
+    };
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = original;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [close]);
+
+  return (
+    <div
+      className="menu-image-overlay"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+    >
+      <div
+        className="menu-image-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${menu.name} 전체 사진`}
+      >
+        <button
+          type="button"
+          className="menu-image-close"
+          onClick={close}
+          aria-label="사진 닫기"
+        >
+          <X size={23} />
+        </button>
+        <img src={asset(menu.image)} alt={`${menu.name} 전체 사진`} />
+        <p>{menu.name} ♡</p>
+      </div>
+    </div>
+  );
+}
+
+function DetailPage({
+  menu,
+  back,
+  liked,
+  toggle,
+  shareRecipe,
+  shareOrder,
+  expandPhoto,
+}) {
   const steps = menu.steps || [];
   return (
     <main className="recipe-page">
       <div className="recipe-hero">
-        <FoodPhoto menu={menu} />
+        <button
+          type="button"
+          className="recipe-photo-expand"
+          onClick={() => expandPhoto(menu)}
+          aria-label={`${menu.name} 사진 전체 보기`}
+          title="사진 전체 보기"
+        >
+          <FoodPhoto menu={menu} />
+          <span className="recipe-zoom-hint" aria-hidden="true">
+            <ZoomIn size={18} />
+          </span>
+        </button>
         <button className="detail-back" aria-label="뒤로 가기" onClick={back}>
           <ArrowLeft size={24} />
         </button>
@@ -906,7 +1010,18 @@ function DetailPage({ menu, back, liked, toggle, shareRecipe, shareOrder }) {
               ))}
             </ul>
           </div>
-          <FoodPhoto menu={menu} className="ingredient-preview" />
+          <button
+            type="button"
+            className="ingredient-photo-expand"
+            onClick={() => expandPhoto(menu)}
+            aria-label={`${menu.name} 사진 전체 보기`}
+            title="사진 전체 보기"
+          >
+            <FoodPhoto menu={menu} className="ingredient-preview" />
+            <span className="ingredient-zoom-hint" aria-hidden="true">
+              <ZoomIn size={16} />
+            </span>
+          </button>
         </div>
         {menu.drinks?.length > 0 && (
           <section
@@ -955,6 +1070,10 @@ function DetailPage({ menu, back, liked, toggle, shareRecipe, shareOrder }) {
 export default function App() {
   const [page, setPage] = useState("home");
   const [viewModes, setViewModes] = useState(initialViews);
+  // 도시락/저녁의 검색어와 펼침 상태를 각각 유지해요.
+  const [searchOpen, setSearchOpen] = useState({ lunch: false, dining: false });
+  const [searchTerms, setSearchTerms] = useState({ lunch: "", dining: "" });
+  const [expandedPhoto, setExpandedPhoto] = useState(null);
   const changeViewMode = (section, mode) => {
     setViewModes((current) => ({ ...current, [section]: mode }));
   };
@@ -1095,6 +1214,17 @@ export default function App() {
   const resetMenuScroll = () => {
     if (menuScrollRef.current) menuScrollRef.current.scrollTop = 0;
   };
+  const toggleSearch = (section) => {
+    setSearchOpen((current) => ({ ...current, [section]: !current[section] }));
+    // 검색창을 닫을 때는 검색어도 지워서 숨은 필터가 남지 않게 해요.
+    if (searchOpen[section])
+      setSearchTerms((current) => ({ ...current, [section]: "" }));
+    resetMenuScroll();
+  };
+  const changeSearch = (section, value) => {
+    setSearchTerms((current) => ({ ...current, [section]: value }));
+    resetMenuScroll();
+  };
   const pickLunchCuisine = (value) => {
     setLunchCuisine(value);
     resetMenuScroll();
@@ -1112,33 +1242,53 @@ export default function App() {
     setCuisine("전체");
   };
   const shown = useMemo(() => {
-    if (page === "lunch")
-      return menus.filter(
+    let results;
+    if (page === "lunch") {
+      results = menus.filter(
         (m) =>
           m.category === "lunch" &&
           (lunchCuisine === "전체" || m.cuisine === lunchCuisine),
       );
-    if (page === "favorite")
+    } else if (page === "favorite") {
       return favs.map((id) => menus.find((m) => m.id === id)).filter(Boolean);
-    if (page !== "dining") return [];
-    if (drink !== "전체")
-      return menus.filter(
+    } else if (page !== "dining") {
+      return [];
+    } else if (drink !== "전체") {
+      results = menus.filter(
         (m) => m.category !== "lunch" && m.drinks?.includes(drink),
       );
-    if (cuisine === "술안주")
-      return menus.filter((m) => m.category === "snack");
-    if (cuisine !== "전체")
-      return menus.filter(
+    } else if (cuisine === "술안주") {
+      results = menus.filter((m) => m.category === "snack");
+    } else if (cuisine !== "전체") {
+      results = menus.filter(
         (m) => m.category === "dinner" && m.cuisine === cuisine,
       );
-    return menus
-      .filter((m) => m.category !== "lunch")
-      .sort((a, b) => {
-        const x = featured.indexOf(a.id),
-          y = featured.indexOf(b.id);
-        return (x < 0 ? 999 : x) - (y < 0 ? 999 : y);
-      });
-  }, [page, cuisine, lunchCuisine, drink, favs]);
+    } else {
+      results = menus
+        .filter((m) => m.category !== "lunch")
+        .sort((a, b) => {
+          const x = featured.indexOf(a.id),
+            y = featured.indexOf(b.id);
+          return (x < 0 ? 999 : x) - (y < 0 ? 999 : y);
+        });
+    }
+
+    // 음식명·설명·분류·재료를 동시에 검색. 공백과 대소문자 차이는 무시해요.
+    const normalize = (value) =>
+      String(value || "")
+        .toLocaleLowerCase("ko-KR")
+        .replace(/\s+/g, "");
+    const keyword = normalize(searchTerms[page]);
+    if (!keyword) return results;
+    return results.filter((menu) =>
+      [
+        menu.name,
+        menu.description,
+        menu.cuisine,
+        ...(menu.ingredients || []),
+      ].some((value) => normalize(value).includes(keyword)),
+    );
+  }, [page, cuisine, lunchCuisine, drink, favs, searchTerms]);
 
   const openRandom = (type) => {
     setRandomType(type);
@@ -1274,6 +1424,10 @@ export default function App() {
                 pick={pickLunchCuisine}
                 viewMode={viewModes.lunch}
                 onViewModeChange={(mode) => changeViewMode("lunch", mode)}
+                searchOpen={searchOpen.lunch}
+                searchValue={searchTerms.lunch}
+                onSearchToggle={() => toggleSearch("lunch")}
+                onSearchChange={(value) => changeSearch("lunch", value)}
               />
             </div>
             <section
@@ -1285,9 +1439,11 @@ export default function App() {
                 cards
               ) : (
                 <p className="empty-message">
-                  {lunchCuisine === "전체"
-                    ? "도시락 메뉴를 추가하면 랜덤 도시락도 바로 쓸 수 있어요 ♡"
-                    : "아직 이 종류의 도시락이 없어요 ♡"}
+                  {searchTerms.lunch.trim()
+                    ? `"${searchTerms.lunch}" 검색 결과가 없어요 ♡`
+                    : lunchCuisine === "전체"
+                      ? "도시락 메뉴를 추가하면 랜덤 도시락도 바로 쓸 수 있어요 ♡"
+                      : "아직 이 종류의 도시락이 없어요 ♡"}
                 </p>
               )}
             </section>
@@ -1312,6 +1468,10 @@ export default function App() {
                 pick={pickCuisine}
                 viewMode={viewModes.dining}
                 onViewModeChange={(mode) => changeViewMode("dining", mode)}
+                searchOpen={searchOpen.dining}
+                searchValue={searchTerms.dining}
+                onSearchToggle={() => toggleSearch("dining")}
+                onSearchChange={(value) => changeSearch("dining", value)}
               />
               <Filters
                 heading="술 종류"
@@ -1328,7 +1488,11 @@ export default function App() {
               {shown.length ? (
                 cards
               ) : (
-                <p className="empty-message">아직 준비 중인 메뉴예요 ♡</p>
+                <p className="empty-message">
+                  {searchTerms.dining.trim()
+                    ? `"${searchTerms.dining}" 검색 결과가 없어요 ♡`
+                    : "아직 준비 중인 메뉴예요 ♡"}
+                </p>
               )}
             </section>
           </main>
@@ -1372,11 +1536,18 @@ export default function App() {
             toggle={toggle}
             shareRecipe={shareRecipe}
             shareOrder={shareOrder}
+            expandPhoto={setExpandedPhoto}
           />
         )}
       </div>
       {page !== "detail" && (
         <BottomNav page={page} change={navigate} favorites={favs} />
+      )}
+      {expandedPhoto && (
+        <MenuImageModal
+          menu={expandedPhoto}
+          close={() => setExpandedPhoto(null)}
+        />
       )}
       {orderMenu && (
         <OrderDrinkModal

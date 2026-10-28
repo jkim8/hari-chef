@@ -1677,3 +1677,189 @@ span.filter-chip {
 .site-shell.is-listing .menu-view-toggle button {
   height: 26px;
 }
+
+/* v30 · 이름/재료 검색: 닫힌 상태는 상단 높이가 늘지 않아요 */
+.filter-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+.menu-search-toggle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 31px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: #f6ebef;
+  color: #b26c87;
+  cursor: pointer;
+}
+.menu-search-toggle.active {
+  background: #f75c8d;
+  color: white;
+}
+.menu-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 0 10px;
+  border: 1.5px solid #f5bfd1;
+  border-radius: 12px;
+  background: #fff9fc;
+  color: #dc5b89;
+}
+.menu-search-field:focus-within {
+  border-color: #f75c8d;
+}
+.menu-search-field input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #51303f;
+  font-size: 13px;
+}
+.menu-search-field input::placeholder {
+  color: #bb94a3;
+}
+.menu-search-field input::-webkit-search-cancel-button {
+  display: none;
+}
+.menu-search-field button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ffe4ed;
+  color: #b65679;
+  cursor: pointer;
+}
+
+/* v30 · 사진을 누르면 원본이 잘리지 않는 전체 화면 팝업 */
+.recipe-photo-expand {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  position: relative;
+}
+.recipe-photo-expand > .food-photo {
+  width: 100%;
+  height: 100%;
+}
+.recipe-zoom-hint,
+.ingredient-zoom-hint {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  background: #fffaf7ea;
+  color: #d74c80;
+  pointer-events: none;
+  box-shadow: 0 1px 6px #9f3e6a20;
+}
+.ingredient-photo-expand {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 145px;
+  min-width: 0;
+  margin-top: 15px;
+  padding: 0;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  cursor: zoom-in;
+  overflow: hidden;
+}
+.ingredient-photo-expand .ingredient-preview {
+  width: 100%;
+  height: 100%;
+  margin-top: 0;
+}
+.ingredient-zoom-hint {
+  right: 7px;
+  bottom: 7px;
+  width: 27px;
+  height: 27px;
+}
+.menu-image-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  padding: max(20px, env(safe-area-inset-top)) 14px
+    max(20px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(80, 45, 65, 0.35);
+  backdrop-filter: blur(3px);
+}
+.menu-image-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 600px);
+  max-height: 100%;
+  padding: 35px 10px 12px;
+  border-radius: 22px;
+  background: #fff6fa;
+  box-shadow: 0 20px 60px #1d0d1f70;
+}
+.menu-image-dialog img {
+  display: block;
+  width: 100%;
+  max-height: calc(100dvh - 160px);
+  object-fit: contain;
+  border-radius: 12px;
+}
+.menu-image-dialog p {
+  flex: none;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 850;
+  color: #bd507a;
+  text-align: center;
+}
+.menu-image-close {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ffe5ed;
+  color: #c44373;
+  cursor: pointer;
+}
+@media (max-height: 560px) {
+  .menu-image-dialog img {
+    max-height: calc(100dvh - 118px);
+  }
+}
