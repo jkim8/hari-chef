@@ -11,7 +11,7 @@ const KAKAO_KEY = import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY?.trim();
 
 export function makeMenuLink(menu) {
   const url = new URL(window.location.href);
-  url.searchParams.set('menu', menu.id);
+  url.searchParams.set("menu", menu.id);
   return url.toString();
 }
 
@@ -22,22 +22,30 @@ export function tryKakaoShare(menu, message) {
 
   const link = makeMenuLink(menu);
   const linkInfo = { mobileWebUrl: link, webUrl: link };
-  const isPublic = window.location.protocol === 'https:' &&
-    !['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const isPublic =
+    window.location.protocol === "https:" &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname);
 
   if (isPublic && menu.image) {
     sdk.Share.sendDefault({
-      objectType: 'feed',
+      objectType: "feed",
       content: {
-        title: `💌 준호야, ${menu.name} 해줘!`,
+        title: `💌 준호씨, ${menu.name} 해줘!`,
         description: message.substring(0, 200),
-        imageUrl: new URL(`${import.meta.env.BASE_URL}${menu.image}`, window.location.href).href,
+        imageUrl: new URL(
+          `${import.meta.env.BASE_URL}${menu.image}`,
+          window.location.href,
+        ).href,
         link: linkInfo,
       },
-      buttons: [{ title: '하리가 고른 메뉴 보기 ♡', link: linkInfo }],
+      buttons: [{ title: "하리가 고른 메뉴 보기 ♡", link: linkInfo }],
     });
   } else {
-    sdk.Share.sendDefault({ objectType: 'text', text: message, link: linkInfo });
+    sdk.Share.sendDefault({
+      objectType: "text",
+      text: message,
+      link: linkInfo,
+    });
   }
   return true;
 }
