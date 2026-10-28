@@ -1725,7 +1725,7 @@ span.filter-chip {
   outline: 0;
   background: transparent;
   color: #51303f;
-  font-size: 13px;
+  font-size: 16px;
 }
 .menu-search-field input::placeholder {
   color: #bb94a3;
