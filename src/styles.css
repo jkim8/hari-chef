@@ -1863,3 +1863,10 @@ span.filter-chip {
     max-height: calc(100dvh - 118px);
   }
 }
+.recipe-page .detail-back {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  left: max(17px, calc((100vw - 480px) / 2 + 17px));
+  z-index: 100;
+  box-shadow: 0 4px 14px rgba(82, 45, 58, 0.17);
+}

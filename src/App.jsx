@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Heart,
@@ -54,7 +54,7 @@ const featured = ["1", "2", "3", "4"];
 function orderMessage(menu, selectedDrinks = [], noAlcohol = false) {
   // 도시락은 술 내용 없이 보내고, 저녁/술안주는 팝업에서 고른 술만 보내요.
   const drinkLine =
-    menu.category === "lunch"
+    menu.category === "lunch" && !menu.alsoDinner
       ? null
       : noAlcohol
         ? "🥤 오늘은 No 술! 음식만 맛있게 먹자 ♡"
@@ -65,7 +65,7 @@ function orderMessage(menu, selectedDrinks = [], noAlcohol = false) {
   return [
     "💗 하리씨의 명예요리사 준호에게 💗",
     "",
-    `준호씨, 나 ${menu.name} 먹고 싶어요! 🥹💕`,
+    `준호야, 나 ${menu.name} 먹고 싶어! 🥹💕`,
     "맛있게 만들어 줄 거지? ♡",
     ...(drinkLine ? ["", drinkLine] : []),
     "",
@@ -225,6 +225,10 @@ function FoodPhoto({ menu, className = "" }) {
   );
 }
 
+// 도시락/저녁 겸용은 한 메뉴 ID로 양쪽에 표시해요.
+const isDinnerMenu = (menu) =>
+  menu.category !== "lunch" || menu.alsoDinner === true;
+
 function FoodCard({ menu, open, liked, toggle }) {
   return (
     <article
@@ -239,11 +243,7 @@ function FoodCard({ menu, open, liked, toggle }) {
         <div className="food-caption">
           <strong>{menu.name}</strong>
           <span className="food-kind">
-            {menu.category === "snack"
-              ? "술안주"
-              : menu.category === "lunch"
-                ? "도시락"
-                : menu.cuisine || "저녁"}
+            {menu.category === "snack" ? "술안주" : menu.cuisine || "기타"}
           </span>
           {menu.drinks?.length > 0 && (
             <span
@@ -752,11 +752,7 @@ function RandomMenuModal({
             <FoodPhoto menu={menu} className="random-food-image" />
             <h3>{menu.name}</h3>
             <span className="random-category">
-              {menu.category === "lunch"
-                ? "도시락"
-                : menu.category === "snack"
-                  ? "술안주"
-                  : `${menu.cuisine || "저녁"} 요리`}
+              {menu.category === "snack" ? "술안주" : menu.cuisine || "기타"}
             </span>
             {menu.drinks?.length > 0 && (
               <p className="random-pairings">🍷 {menu.drinks.join(" · ")}</p>
@@ -991,11 +987,7 @@ function DetailPage({
           <div>
             <h1>{menu.name}</h1>
             <span>
-              {menu.category === "lunch"
-                ? "도시락"
-                : menu.category === "dinner"
-                  ? `${menu.cuisine} 요리`
-                  : "술안주"}
+              {menu.category === "snack" ? "술안주" : menu.cuisine || "기타"}
             </span>
           </div>
           <span className="recipe-doodle">♡</span>
@@ -1088,6 +1080,21 @@ export default function App() {
   const [cuisine, setCuisine] = useState("전체");
   const [lunchCuisine, setLunchCuisine] = useState("전체");
   const menuScrollRef = useRef(null);
+  // 목록이 상세 화면으로 바뀌면 스크롤 영역이 사라지므로 위치를 따로 저장합니다.
+  const menuScrollPositionsRef = useRef({ lunch: 0, dining: 0, favorite: 0 });
+
+  // 목록이 다시 화면에 붙은 직후, 화면이 그려지기 전에 이전 위치로 되돌립니다.
+  useLayoutEffect(() => {
+    if (!["lunch", "dining", "favorite"].includes(page)) return;
+    if (!menuScrollRef.current) return;
+    menuScrollRef.current.scrollTop = menuScrollPositionsRef.current[page] ?? 0;
+  }, [page]);
+
+  const rememberMenuScroll = (event) => {
+    if (["lunch", "dining", "favorite"].includes(page)) {
+      menuScrollPositionsRef.current[page] = event.currentTarget.scrollTop;
+    }
+  };
   const [drink, setDrink] = useState("전체");
   const [favs, setFavs] = useState(favoritesInitial);
   const [toast, setToast] = useState("");
@@ -1153,6 +1160,13 @@ export default function App() {
     setRandomOpen(false);
   };
   const open = (menu) => {
+    // 빠르게 탭한 경우에도 마지막 위치를 놓치지 않도록 상세 진입 직전에 저장해요.
+    if (
+      menuScrollRef.current &&
+      ["lunch", "dining", "favorite"].includes(page)
+    ) {
+      menuScrollPositionsRef.current[page] = menuScrollRef.current.scrollTop;
+    }
     setFromPage(page);
     setChosen(menu);
     setPage("detail");
@@ -1194,10 +1208,10 @@ export default function App() {
       text: recipeMessage(menu),
     });
   const shareOrder = (menu) => {
-    if (menu.category === "lunch") {
-      // 🍱 도시락은 팝업과 술 선택 없이 바로 공유해요.
+    if (menu.category === "lunch" && fromPage !== "dining") {
+      // 🍱 도시락으로 선택했을 때는 팝업과 술 선택 없이 바로 공유해요.
       return openNativeShare({
-        title: `준호씨, ${menu.name} 해줘요 ♡`,
+        title: `준호야, ${menu.name} 해줘 ♡`,
         text: orderMessage(menu),
       });
     }
@@ -1207,11 +1221,15 @@ export default function App() {
   const shareOrderWithDrinks = (menu, drinks, noAlcohol) => {
     setOrderMenu(null);
     return openNativeShare({
-      title: `준호씨, ${menu.name} 해줘요 ♡`,
+      title: `준호야, ${menu.name} 해줘 ♡`,
       text: orderMessage(menu, drinks, noAlcohol),
     });
   };
   const resetMenuScroll = () => {
+    // 검색/필터 변경은 새 목록이므로 맨 위부터 보여줍니다.
+    if (["lunch", "dining", "favorite"].includes(page)) {
+      menuScrollPositionsRef.current[page] = 0;
+    }
     if (menuScrollRef.current) menuScrollRef.current.scrollTop = 0;
   };
   const toggleSearch = (section) => {
@@ -1261,16 +1279,15 @@ export default function App() {
       results = menus.filter((m) => m.category === "snack");
     } else if (cuisine !== "전체") {
       results = menus.filter(
-        (m) => m.category === "dinner" && m.cuisine === cuisine,
+        (m) =>
+          isDinnerMenu(m) && m.category !== "snack" && m.cuisine === cuisine,
       );
     } else {
-      results = menus
-        .filter((m) => m.category !== "lunch")
-        .sort((a, b) => {
-          const x = featured.indexOf(a.id),
-            y = featured.indexOf(b.id);
-          return (x < 0 ? 999 : x) - (y < 0 ? 999 : y);
-        });
+      results = menus.filter(isDinnerMenu).sort((a, b) => {
+        const x = featured.indexOf(a.id),
+          y = featured.indexOf(b.id);
+        return (x < 0 ? 999 : x) - (y < 0 ? 999 : y);
+      });
     }
 
     // 음식명·설명·분류·재료를 동시에 검색. 공백과 대소문자 차이는 무시해요.
@@ -1302,9 +1319,7 @@ export default function App() {
       ? page === "lunch"
         ? shown
         : menus.filter((item) => item.category === "lunch")
-      : shown.filter(
-          (item) => item.category === "dinner" || item.category === "snack",
-        );
+      : shown.filter((item) => isDinnerMenu(item));
   const rerollRandom = () => {
     if (randomCandidates.length === 0) return;
     // 도시락과 저녁/술안주는 섞이지 않아요. 바로 직전 메뉴는 가능한 한 피합니다.
@@ -1432,6 +1447,7 @@ export default function App() {
             </div>
             <section
               ref={menuScrollRef}
+              onScroll={rememberMenuScroll}
               className="menu-scroll-region"
               aria-label="도시락 메뉴 목록"
             >
@@ -1482,6 +1498,7 @@ export default function App() {
             </div>
             <section
               ref={menuScrollRef}
+              onScroll={rememberMenuScroll}
               className="menu-scroll-region"
               aria-label="저녁 및 술안주 메뉴 목록"
             >
@@ -1507,6 +1524,7 @@ export default function App() {
             <SmallBanner variant="favorite" />
             <section
               ref={menuScrollRef}
+              onScroll={rememberMenuScroll}
               className="menu-scroll-region"
               aria-label="즐겨찾기 음식 목록"
             >
