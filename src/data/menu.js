@@ -1701,6 +1701,7 @@ export const menus = [
     alsoDinner: true,
     cuisine: "일식",
     name: "야키소바",
+    drinks: ["소주", "소맥", "맥주", "막걸리"],
     image: "menu/48.png",
     emoji: "🍜",
     tint: "#ffe0c8",
@@ -2160,7 +2161,7 @@ export const menus = [
     image: "menu/61.png",
     emoji: "🍜",
     tint: "#f5d2c0",
-    drinks: [],
+    drinks: ["맥주", "소맥", "소주", "막걸리"],
     description:
       "매콤새콤한 쫄면과 아삭한 채소 위에 간장 양념으로 구운 차돌박이를 올린 든든한 한 그릇. 도시락과 저녁으로 모두 좋아요.",
     ingredients: [

@@ -75,7 +75,7 @@ function orderMessage(menu, selectedDrinks = [], noAlcohol = false) {
 
 // 레시피 전체를 공유할 수 있도록 재료와 조리 순서를 메시지로 구성해요.
 // 요리사의 한마디(menu.note)는 포함하지 않습니다.
-function recipeMessage(menu) {
+function recipeMessage(menu, showDrinks = false) {
   const steps = menu.steps || [];
   return [
     `🍳 ${menu.name}`,
@@ -85,7 +85,7 @@ function recipeMessage(menu) {
     "🛒 재료",
     ...(menu.ingredients || []).map((item) => `• ${item}`),
     "",
-    ...(menu.drinks?.length
+    ...(showDrinks && menu.drinks?.length
       ? [`🍷 어울리는 술: ${menu.drinks.join(", ")}`, ""]
       : []),
     "👩🏻‍🍳 만드는 방법",
@@ -226,13 +226,12 @@ function FoodPhoto({ menu, className = "" }) {
 }
 
 // 도시락/저녁 겸용은 한 메뉴 ID로 양쪽에 표시해요.
-const isDinnerMenu = (menu) =>
-  menu.category !== "lunch" || menu.alsoDinner === true;
+const isDinnerMenu = (menu) => menu.category !== "lunch" || menu.alsoDinner === true;
 
-function FoodCard({ menu, open, liked, toggle }) {
+function FoodCard({ menu, open, liked, toggle, compact = false, showDrinks = false }) {
   return (
     <article
-      className={`food-card${menu.category === "lunch" ? " food-card--lunch" : ""}`}
+      className={`food-card${compact ? " food-card--lunch" : ""}`}
     >
       <button
         className="card-open"
@@ -245,7 +244,7 @@ function FoodCard({ menu, open, liked, toggle }) {
           <span className="food-kind">
             {menu.category === "snack" ? "술안주" : menu.cuisine || "기타"}
           </span>
-          {menu.drinks?.length > 0 && (
+          {showDrinks && menu.drinks?.length > 0 && (
             <span
               className="food-drinks"
               title={`어울리는 술: ${menu.drinks.join(" · ")}`}
@@ -754,7 +753,7 @@ function RandomMenuModal({
             <span className="random-category">
               {menu.category === "snack" ? "술안주" : menu.cuisine || "기타"}
             </span>
-            {menu.drinks?.length > 0 && (
+            {type === "dining" && menu.drinks?.length > 0 && (
               <p className="random-pairings">🍷 {menu.drinks.join(" · ")}</p>
             )}
             <p className="random-description">{menu.description}</p>
@@ -925,12 +924,7 @@ function MenuImageModal({ menu, close }) {
         if (event.target === event.currentTarget) close();
       }}
     >
-      <div
-        className="menu-image-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${menu.name} 전체 사진`}
-      >
+      <div className="menu-image-dialog" role="dialog" aria-modal="true" aria-label={`${menu.name} 전체 사진`}>
         <button
           type="button"
           className="menu-image-close"
@@ -946,15 +940,7 @@ function MenuImageModal({ menu, close }) {
   );
 }
 
-function DetailPage({
-  menu,
-  back,
-  liked,
-  toggle,
-  shareRecipe,
-  shareOrder,
-  expandPhoto,
-}) {
+function DetailPage({ menu, back, liked, toggle, shareRecipe, shareOrder, expandPhoto, showDrinks = false }) {
   const steps = menu.steps || [];
   return (
     <main className="recipe-page">
@@ -967,9 +953,7 @@ function DetailPage({
           title="사진 전체 보기"
         >
           <FoodPhoto menu={menu} />
-          <span className="recipe-zoom-hint" aria-hidden="true">
-            <ZoomIn size={18} />
-          </span>
+          <span className="recipe-zoom-hint" aria-hidden="true"><ZoomIn size={18} /></span>
         </button>
         <button className="detail-back" aria-label="뒤로 가기" onClick={back}>
           <ArrowLeft size={24} />
@@ -1010,12 +994,10 @@ function DetailPage({
             title="사진 전체 보기"
           >
             <FoodPhoto menu={menu} className="ingredient-preview" />
-            <span className="ingredient-zoom-hint" aria-hidden="true">
-              <ZoomIn size={16} />
-            </span>
+            <span className="ingredient-zoom-hint" aria-hidden="true"><ZoomIn size={16} /></span>
           </button>
         </div>
-        {menu.drinks?.length > 0 && (
+        {showDrinks && menu.drinks?.length > 0 && (
           <section
             className="drink-pairings"
             aria-label="어울리는 술"
@@ -1085,7 +1067,7 @@ export default function App() {
 
   // 목록이 다시 화면에 붙은 직후, 화면이 그려지기 전에 이전 위치로 되돌립니다.
   useLayoutEffect(() => {
-    if (!["lunch", "dining", "favorite"].includes(page)) return;
+    if (!(["lunch", "dining", "favorite"].includes(page))) return;
     if (!menuScrollRef.current) return;
     menuScrollRef.current.scrollTop = menuScrollPositionsRef.current[page] ?? 0;
   }, [page]);
@@ -1161,10 +1143,7 @@ export default function App() {
   };
   const open = (menu) => {
     // 빠르게 탭한 경우에도 마지막 위치를 놓치지 않도록 상세 진입 직전에 저장해요.
-    if (
-      menuScrollRef.current &&
-      ["lunch", "dining", "favorite"].includes(page)
-    ) {
+    if (menuScrollRef.current && ["lunch", "dining", "favorite"].includes(page)) {
       menuScrollPositionsRef.current[page] = menuScrollRef.current.scrollTop;
     }
     setFromPage(page);
@@ -1205,11 +1184,11 @@ export default function App() {
   const shareRecipe = (menu) =>
     openNativeShare({
       title: `${menu.name} 레시피 💗`,
-      text: recipeMessage(menu),
+      text: recipeMessage(menu, fromPage === "dining"),
     });
   const shareOrder = (menu) => {
-    if (menu.category === "lunch" && fromPage !== "dining") {
-      // 🍱 도시락으로 선택했을 때는 팝업과 술 선택 없이 바로 공유해요.
+    if (fromPage !== "dining") {
+      // 🍱 도시락·즐겨찾기에서 들어온 상세 화면은 술 팝업 없이 바로 공유해요.
       return openNativeShare({
         title: `준호야, ${menu.name} 해줘 ♡`,
         text: orderMessage(menu),
@@ -1235,8 +1214,7 @@ export default function App() {
   const toggleSearch = (section) => {
     setSearchOpen((current) => ({ ...current, [section]: !current[section] }));
     // 검색창을 닫을 때는 검색어도 지워서 숨은 필터가 남지 않게 해요.
-    if (searchOpen[section])
-      setSearchTerms((current) => ({ ...current, [section]: "" }));
+    if (searchOpen[section]) setSearchTerms((current) => ({ ...current, [section]: "" }));
     resetMenuScroll();
   };
   const changeSearch = (section, value) => {
@@ -1263,8 +1241,7 @@ export default function App() {
     let results;
     if (page === "lunch") {
       results = menus.filter(
-        (m) =>
-          m.category === "lunch" &&
+        (m) => m.category === "lunch" &&
           (lunchCuisine === "전체" || m.cuisine === lunchCuisine),
       );
     } else if (page === "favorite") {
@@ -1272,38 +1249,27 @@ export default function App() {
     } else if (page !== "dining") {
       return [];
     } else if (drink !== "전체") {
-      results = menus.filter(
-        (m) => m.category !== "lunch" && m.drinks?.includes(drink),
-      );
+      results = menus.filter((m) => m.category !== "lunch" && m.drinks?.includes(drink));
     } else if (cuisine === "술안주") {
       results = menus.filter((m) => m.category === "snack");
     } else if (cuisine !== "전체") {
-      results = menus.filter(
-        (m) =>
-          isDinnerMenu(m) && m.category !== "snack" && m.cuisine === cuisine,
-      );
+      results = menus.filter((m) => isDinnerMenu(m) && m.category !== "snack" && m.cuisine === cuisine);
     } else {
-      results = menus.filter(isDinnerMenu).sort((a, b) => {
-        const x = featured.indexOf(a.id),
-          y = featured.indexOf(b.id);
-        return (x < 0 ? 999 : x) - (y < 0 ? 999 : y);
-      });
+      results = menus
+        .filter(isDinnerMenu)
+        .sort((a, b) => {
+          const x = featured.indexOf(a.id), y = featured.indexOf(b.id);
+          return (x < 0 ? 999 : x) - (y < 0 ? 999 : y);
+        });
     }
 
     // 음식명·설명·분류·재료를 동시에 검색. 공백과 대소문자 차이는 무시해요.
-    const normalize = (value) =>
-      String(value || "")
-        .toLocaleLowerCase("ko-KR")
-        .replace(/\s+/g, "");
+    const normalize = (value) => String(value || "").toLocaleLowerCase("ko-KR").replace(/\s+/g, "");
     const keyword = normalize(searchTerms[page]);
     if (!keyword) return results;
     return results.filter((menu) =>
-      [
-        menu.name,
-        menu.description,
-        menu.cuisine,
-        ...(menu.ingredients || []),
-      ].some((value) => normalize(value).includes(keyword)),
+      [menu.name, menu.description, menu.cuisine, ...(menu.ingredients || [])]
+        .some((value) => normalize(value).includes(keyword)),
     );
   }, [page, cuisine, lunchCuisine, drink, favs, searchTerms]);
 
@@ -1319,7 +1285,9 @@ export default function App() {
       ? page === "lunch"
         ? shown
         : menus.filter((item) => item.category === "lunch")
-      : shown.filter((item) => isDinnerMenu(item));
+      : shown.filter(
+          (item) => isDinnerMenu(item),
+        );
   const rerollRandom = () => {
     if (randomCandidates.length === 0) return;
     // 도시락과 저녁/술안주는 섞이지 않아요. 바로 직전 메뉴는 가능한 한 피합니다.
@@ -1353,6 +1321,8 @@ export default function App() {
         <FoodCard
           key={menu.id}
           menu={menu}
+          compact={menu.category === "lunch" && page !== "dining"}
+          showDrinks={page === "dining"}
           open={open}
           liked={favs.includes(menu.id)}
           toggle={toggle}
@@ -1555,6 +1525,7 @@ export default function App() {
             shareRecipe={shareRecipe}
             shareOrder={shareOrder}
             expandPhoto={setExpandedPhoto}
+            showDrinks={fromPage === "dining"}
           />
         )}
       </div>
@@ -1562,10 +1533,7 @@ export default function App() {
         <BottomNav page={page} change={navigate} favorites={favs} />
       )}
       {expandedPhoto && (
-        <MenuImageModal
-          menu={expandedPhoto}
-          close={() => setExpandedPhoto(null)}
-        />
+        <MenuImageModal menu={expandedPhoto} close={() => setExpandedPhoto(null)} />
       )}
       {orderMenu && (
         <OrderDrinkModal
