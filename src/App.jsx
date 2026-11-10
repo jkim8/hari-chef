@@ -1086,6 +1086,8 @@ export default function App() {
   const [cuisine, setCuisine] = useState("전체");
   const [lunchCuisine, setLunchCuisine] = useState("전체");
   const menuScrollRef = useRef(null);
+  // 모바일 화면에서 오른쪽으로 밀어 이전 단계로 돌아가는 제스처 시작점.
+  const swipeBackStartRef = useRef(null);
   // 목록이 상세 화면으로 바뀌면 스크롤 영역이 사라지므로 위치를 따로 저장합니다.
   const menuScrollPositionsRef = useRef({ lunch: 0, dining: 0, favorite: 0 });
 
@@ -1185,6 +1187,67 @@ export default function App() {
     url.searchParams.delete("menu");
     history.replaceState(null, "", url);
   };
+
+  // iPhone 홈 화면 PWA 등에서도 앱 내부에서 오른쪽 스와이프로 뒤로가기.
+  // 상세 -> 해당 목록(기존 스크롤 위치 유지), 목록 -> 홈(도시락/저녁 선택 화면).
+  const handleSwipeBackStart = (event) => {
+    swipeBackStartRef.current = null;
+    if (!["detail", "lunch", "dining", "favorite"].includes(page)) return;
+    if (expandedPhoto || orderMenu || randomOpen || galleryOpen || quoteOpen)
+      return;
+    if (event.touches.length !== 1) return;
+
+    // 가로로 움직이는 필터, 검색창, 입력 영역은 제스처와 충돌하지 않게 제외.
+    const target = event.target;
+    if (
+      target?.closest?.(
+        '.filter-chips, .menu-search-field, input, textarea, select, [contenteditable="true"]',
+      )
+    )
+      return;
+
+    const touch = event.touches[0];
+    swipeBackStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      startedAt: Date.now(),
+    };
+  };
+
+  const handleSwipeBackMove = (event) => {
+    const start = swipeBackStartRef.current;
+    if (!start) return;
+    if (event.touches.length !== 1) {
+      swipeBackStartRef.current = null;
+      return;
+    }
+    const touch = event.touches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    // 먼저 세로 스크롤을 시작했다면 뒤로가기 판정에서 제외.
+    if (Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx) * 1.2) {
+      swipeBackStartRef.current = null;
+    }
+  };
+
+  const handleSwipeBackEnd = (event) => {
+    const start = swipeBackStartRef.current;
+    swipeBackStartRef.current = null;
+    if (!start || event.changedTouches.length !== 1) return;
+
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const elapsed = Date.now() - start.startedAt;
+    // 왼쪽에서 오른쪽으로 확실히 민 경우에만 뒤로가기(탭/세로 스크롤 제외).
+    if (dx < 90 || dx < Math.abs(dy) * 1.6 || elapsed > 1500) return;
+
+    // 스와이프한 위치의 카드/사진을 동시에 클릭하는 것을 방지.
+    if (event.cancelable) event.preventDefault();
+    if (page === "detail") back();
+    else navigate("home");
+  };
+
   const toggle = (id) =>
     setFavs((old) =>
       old.includes(id) ? old.filter((x) => x !== id) : [...old, id],
@@ -1371,6 +1434,12 @@ export default function App() {
   return (
     <div
       className={`site-shell${page === "home" ? " is-home" : ""}${page === "lunch" || page === "dining" || page === "favorite" ? " is-listing" : ""}`}
+      onTouchStartCapture={handleSwipeBackStart}
+      onTouchMoveCapture={handleSwipeBackMove}
+      onTouchEndCapture={handleSwipeBackEnd}
+      onTouchCancelCapture={() => {
+        swipeBackStartRef.current = null;
+      }}
     >
       <div className="page-content">
         {page === "home" && (
