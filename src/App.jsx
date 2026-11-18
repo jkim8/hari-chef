@@ -49,7 +49,9 @@ const favoritesInitial = () => {
     return [];
   }
 };
-const featured = ["1", "2", "3", "4"];
+// 신규 등록된 메뉴일수록 먼저 보여줘요. 기존 공유 링크·즐겨찾기 ID는 그대로 유지.
+const sortNewestFirst = (items) =>
+  [...items].sort((a, b) => Number(b.id) - Number(a.id));
 
 function orderMessage(menu, selectedDrinks = [], noAlcohol = false) {
   // 도시락은 술 내용 없이 보내고, 저녁/술안주는 팝업에서 고른 술만 보내요.
@@ -1337,7 +1339,9 @@ export default function App() {
           (lunchCuisine === "전체" || m.cuisine === lunchCuisine),
       );
     } else if (page === "favorite") {
-      return favs.map((id) => menus.find((m) => m.id === id)).filter(Boolean);
+      return sortNewestFirst(
+        favs.map((id) => menus.find((m) => m.id === id)).filter(Boolean),
+      );
     } else if (page !== "dining") {
       return [];
     } else if (drink !== "전체") {
@@ -1352,11 +1356,7 @@ export default function App() {
           isDinnerMenu(m) && m.category !== "snack" && m.cuisine === cuisine,
       );
     } else {
-      results = menus.filter(isDinnerMenu).sort((a, b) => {
-        const x = featured.indexOf(a.id),
-          y = featured.indexOf(b.id);
-        return (x < 0 ? 999 : x) - (y < 0 ? 999 : y);
-      });
+      results = menus.filter(isDinnerMenu);
     }
 
     // 음식명·설명·분류·재료를 동시에 검색. 공백과 대소문자 차이는 무시해요.
@@ -1365,15 +1365,18 @@ export default function App() {
         .toLocaleLowerCase("ko-KR")
         .replace(/\s+/g, "");
     const keyword = normalize(searchTerms[page]);
-    if (!keyword) return results;
-    return results.filter((menu) =>
-      [
-        menu.name,
-        menu.description,
-        menu.cuisine,
-        ...(menu.ingredients || []),
-      ].some((value) => normalize(value).includes(keyword)),
-    );
+    const filteredResults = keyword
+      ? results.filter((menu) =>
+          [
+            menu.name,
+            menu.description,
+            menu.cuisine,
+            ...(menu.ingredients || []),
+          ].some((value) => normalize(value).includes(keyword)),
+        )
+      : results;
+    // 도시락·저녁·검색·필터 모두 가장 최근에 등록한 ID부터 표시해요.
+    return sortNewestFirst(filteredResults);
   }, [page, cuisine, lunchCuisine, drink, favs, searchTerms]);
 
   const openRandom = (type) => {
